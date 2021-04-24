@@ -1,0 +1,91 @@
+apply plugin: 'com.android.application'
+apply plugin: 'de.undercouch.download'
+
+android {
+    compileSdkVersion 30
+    buildToolsVersion '29.0.3'
+    defaultConfig {
+        applicationId "org.tensorflow.lite.examples.detection"
+        minSdkVersion 21
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    aaptOptions {
+        noCompress "tflite"
+    }
+    compileOptions {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+    repositories {
+        jcenter()
+        flatDir {
+            dirs 'libs'
+        }
+    }
+    lintOptions {
+        abortOnError false
+    }
+    flavorDimensions "tfliteInference"
+    productFlavors {
+       // The TFLite inference is built using the TFLite Java interpreter.
+       interpreter {
+           dimension "tfliteInference"
+       }
+       // Default: The TFLite inference is built using the TFLite Task library (high-level API).
+       taskApi {
+           getIsDefault().set(true)
+           dimension "tfliteInference"
+       }
+    }
+}
+
+// import DownloadModels task
+project.ext.ASSET_DIR = projectDir.toString() + '/src/main/assets'
+project.ext.TMP_DIR   = project.buildDir.toString() + '/downloads'
+ext {
+    LITE_MODEL_URL = 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/smartreply/smartreply.tflite'
+    LITE_MODEL_NAME = 'smartreply.tflite'
+    LITE_MODEL_DIRS = [
+            projectDir.toString() + "/src/main/assets",
+            projectDir.toString() + "/libs/cc/testdata",
+    ]
+
+    AAR_URL = 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/smartreply/smartreply_runtime_aar.aar'
+    AAR_PATH =  projectDir.toString() + "/libs/smartreply_runtime_aar.aar"
+}
+
+// Download default models; if you wish to use your own models then
+// place them in the "assets" directory and comment out this line.
+apply from:'download_model.gradle'
+apply from: 'download.gradle'
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar','*.aar'])
+    assert new File(project.ext.AAR_PATH).exists(): 'Please run `./gradlew :app:downloadAAR()` to download prebuilt aar package, or build it from code. (See: `https://github.com/tensorflow/examples/blob/master/lite/examples/smart_reply/android/how-to-build.md`)'
+    implementation files(project.ext.AAR_PATH)
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    interpreterImplementation project(":lib_interpreter")
+    taskApiImplementation project(":lib_task_api")
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.guava:guava:28.1-android'
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.1.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.4.0'
+    implementation 'com.google.android.material:material:1.3.0'
+
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'com.google.truth:truth:1.0.1'
+    androidTestImplementation 'androidx.test:runner:1.3.0'
+    androidTestImplementation 'androidx.test:rules:1.3.0'
+}
